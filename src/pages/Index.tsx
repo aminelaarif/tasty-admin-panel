@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MenuManagement from '@/components/MenuManagement';
 import OrderManagement from '@/components/OrderManagement';
+import ReservationManagement from '@/components/ReservationManagement';
 
 const Index = () => {
   return (
@@ -17,12 +18,16 @@ const Index = () => {
           <TabsList>
             <TabsTrigger value="menu">Menu Management</TabsTrigger>
             <TabsTrigger value="orders">Order Management</TabsTrigger>
+            <TabsTrigger value="reservations">Reservations</TabsTrigger>
           </TabsList>
           <TabsContent value="menu">
             <MenuManagement />
           </TabsContent>
           <TabsContent value="orders">
             <OrderManagement />
+          </TabsContent>
+          <TabsContent value="reservations">
+            <ReservationManagement />
           </TabsContent>
         </Tabs>
       </main>
