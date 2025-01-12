@@ -3,7 +3,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 
 interface Dish {
   id: string;
@@ -65,6 +69,17 @@ const initialMenus: Menu[] = [
 const MenuManagement = () => {
   const [menus, setMenus] = useState<Menu[]>(initialMenus);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMenu, setSelectedMenu] = useState<string>(menus[0].id);
+  const [isAddDishOpen, setIsAddDishOpen] = useState(false);
+  const [isEditDishOpen, setIsEditDishOpen] = useState(false);
+  const [editingDish, setEditingDish] = useState<Dish | null>(null);
+  const [newDish, setNewDish] = useState<Partial<Dish>>({
+    name: '',
+    description: '',
+    price: 0,
+    image: '/placeholder.svg'
+  });
+  const { toast } = useToast();
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -77,13 +92,124 @@ const MenuManagement = () => {
     )
   }));
 
+  const handleAddDish = () => {
+    if (!newDish.name || !newDish.description || !newDish.price) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newDishWithId: Dish = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newDish.name,
+      description: newDish.description,
+      price: Number(newDish.price),
+      image: newDish.image || '/placeholder.svg'
+    };
+
+    setMenus(prevMenus => 
+      prevMenus.map(menu => 
+        menu.id === selectedMenu
+          ? { ...menu, dishes: [...menu.dishes, newDishWithId] }
+          : menu
+      )
+    );
+
+    setNewDish({
+      name: '',
+      description: '',
+      price: 0,
+      image: '/placeholder.svg'
+    });
+    setIsAddDishOpen(false);
+    toast({
+      title: "Success",
+      description: "Dish added successfully"
+    });
+  };
+
+  const handleEditDish = () => {
+    if (!editingDish || !editingDish.name || !editingDish.description || !editingDish.price) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setMenus(prevMenus =>
+      prevMenus.map(menu => ({
+        ...menu,
+        dishes: menu.dishes.map(dish =>
+          dish.id === editingDish.id ? editingDish : dish
+        )
+      }))
+    );
+
+    setIsEditDishOpen(false);
+    setEditingDish(null);
+    toast({
+      title: "Success",
+      description: "Dish updated successfully"
+    });
+  };
+
+  const openEditDialog = (dish: Dish) => {
+    setEditingDish(dish);
+    setIsEditDishOpen(true);
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-primary">Menu Management</h1>
-        <Button className="bg-secondary hover:bg-secondary/90">
-          <Plus className="mr-2 h-4 w-4" /> Add New Menu
-        </Button>
+        <Dialog open={isAddDishOpen} onOpenChange={setIsAddDishOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-secondary hover:bg-secondary/90">
+              <Plus className="mr-2 h-4 w-4" /> Add New Dish
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Dish</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={newDish.name}
+                  onChange={(e) => setNewDish({ ...newDish, name: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={newDish.description}
+                  onChange={(e) => setNewDish({ ...newDish, description: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="price">Price</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  value={newDish.price}
+                  onChange={(e) => setNewDish({ ...newDish, price: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDishOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddDish}>Add Dish</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="w-full max-w-sm">
@@ -96,7 +222,7 @@ const MenuManagement = () => {
         />
       </div>
 
-      <Tabs defaultValue={menus[0].id} className="w-full">
+      <Tabs defaultValue={menus[0].id} className="w-full" onValueChange={setSelectedMenu}>
         <TabsList className="w-full justify-start">
           {menus.map((menu) => (
             <TabsTrigger key={menu.id} value={menu.id}>
@@ -123,7 +249,7 @@ const MenuManagement = () => {
                     <p className="text-lg font-bold mt-2">${dish.price}</p>
                   </CardContent>
                   <CardFooter className="flex justify-end space-x-2">
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" onClick={() => openEditDialog(dish)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button variant="destructive" size="icon">
@@ -136,6 +262,47 @@ const MenuManagement = () => {
           </TabsContent>
         ))}
       </Tabs>
+
+      <Dialog open={isEditDishOpen} onOpenChange={setIsEditDishOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Dish</DialogTitle>
+          </DialogHeader>
+          {editingDish && (
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editingDish.name}
+                  onChange={(e) => setEditingDish({ ...editingDish, name: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editingDish.description}
+                  onChange={(e) => setEditingDish({ ...editingDish, description: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-price">Price</Label>
+                <Input
+                  id="edit-price"
+                  type="number"
+                  value={editingDish.price}
+                  onChange={(e) => setEditingDish({ ...editingDish, price: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDishOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditDish}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
